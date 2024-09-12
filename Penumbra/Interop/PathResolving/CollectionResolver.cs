@@ -1,6 +1,7 @@
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
+using OtterGui;
 using OtterGui.Services;
 using Penumbra.Collections;
 using Penumbra.Collections.Manager;
@@ -117,15 +118,15 @@ public sealed unsafe class CollectionResolver(
         }
 
         var notYetReady = false;
-        var lobby       = AgentLobby.Instance();
-        if (lobby != null)
+        var lobby = AgentLobby.Instance();
+        var charaSelectCharacterList = CharaSelectCharacterList.Instance();
+        if (lobby != null && charaSelectCharacterList != null)
         {
-            var span = lobby->LobbyData.CharaSelectEntries.AsSpan();
-            // The lobby uses the first 8 cutscene actors.
             var idx = gameObject->ObjectIndex - ObjectIndex.CutsceneStart.Index;
-            if (idx >= 0 && idx < span.Length && span[idx].Value != null)
+            if (charaSelectCharacterList->CharacterMapping.FindFirst((characterMapping) => characterMapping.ClientObjectIndex == idx, out var characterMapping) &&
+                lobby->LobbyData.CharaSelectEntries.FindFirst((charaSelectEntry) => charaSelectEntry.Value->ContentId == characterMapping.ContentId, out var charaSelectEntry))
             {
-                var item       = span[idx].Value;
+                var item = charaSelectEntry.Value;
                 var identifier = actors.CreatePlayer(new ByteString(item->Name), item->HomeWorldId);
                 Penumbra.Log.Verbose(
                     $"Identified {identifier.Incognito(null)} in cutscene for actor {idx + 200} at 0x{(ulong)gameObject:X} of race {(gameObject->IsCharacter() ? ((Character*)gameObject)->DrawData.CustomizeData.Race.ToString() : "Unknown")}.");
